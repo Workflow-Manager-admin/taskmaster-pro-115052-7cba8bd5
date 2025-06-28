@@ -1,47 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import TaskList from "./TaskList";
+import TaskForm from "./TaskForm";
+
+// PUBLIC_INTERFACE
+function Header({ theme, toggleTheme }) {
+  /** Header with app title and theme toggle button. */
+  return (
+    <header className="header">
+      <h1 className="app-title">Taskmaster Pro</h1>
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      >
+        {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+      </button>
+    </header>
+  );
+}
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  /**
+   * Main app with responsive structure, header, theme toggle, routing skeleton,
+   * and placeholders for TaskList and TaskForm.
+   */
+  const [theme, setTheme] = useState("light");
 
-  // Effect to apply theme to document element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  const toggleTheme = () =>
+    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
 
   return (
     <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Header theme={theme} toggleTheme={toggleTheme} />
+      <main className="main-content">
+        <div className="form-controls-container">
+          <TaskForm />
+          {/* Category/filter controls placeholder, will be implemented later */}
+          <section className="task-controls-section">
+            <div className="task-controls-placeholder">
+              <p>Category & Filter Controls will appear here.</p>
+            </div>
+          </section>
+        </div>
+        <TaskList />
+      </main>
     </div>
   );
 }
