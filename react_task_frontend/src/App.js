@@ -35,6 +35,37 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingTask, setEditingTask] = useState(null);
+  // Filter/group/category UI state:
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [groupByCategory, setGroupByCategory] = useState(false);
+
+  // Extract category list from tasks (unique, sorted, exclude empty).
+  const categories = Array.from(
+    new Set(
+      tasks
+        .filter((t) => t.category && t.category.trim())
+        .map((t) => t.category.trim())
+    )
+  ).sort();
+
+  // Assign color per category: use cycling palette, fallback to accent.
+  const defaultPalette = [
+    "#1976d2", // blue
+    "#e53935", // red
+    "#43a047", // green
+    "#ffa726", // orange
+    "#8e24aa", // purple
+    "#fbc02d", // yellow
+    "#00acc1", // teal
+    "#d81b60", // pink
+    "#795548", // brown
+    "#757575" // gray
+  ];
+  // Map category name => color. Cycle palette.
+  const categoryColors = {};
+  categories.forEach((cat, i) => {
+    categoryColors[cat] = defaultPalette[i % defaultPalette.length];
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -169,12 +200,16 @@ function App() {
             onCancelEdit={handleCancelEdit}
             loading={loading}
           />
-          {/* Category/filter controls placeholder, will be implemented later */}
-          <section className="task-controls-section">
-            <div className="task-controls-placeholder">
-              <p>Category & Filter Controls will appear here.</p>
-            </div>
-          </section>
+          {/* Category/filter controls */}
+          <ControlsSection
+            tasks={tasks}
+            filterCategory={filterCategory}
+            setFilterCategory={setFilterCategory}
+            groupByCategory={groupByCategory}
+            setGroupByCategory={setGroupByCategory}
+            categories={categories}
+            categoryColors={categoryColors}
+          />
         </div>
         <TaskList
           tasks={tasks}
@@ -183,9 +218,97 @@ function App() {
           onEditTask={handleEditTaskInit}
           onDeleteTask={handleDeleteTask}
           onToggleCompleted={handleToggleCompleted}
+          filterCategory={filterCategory}
+          groupByCategory={groupByCategory}
+          categoryColors={categoryColors}
         />
       </main>
     </div>
+  );
+}
+
+/**
+ * PUBLIC_INTERFACE
+ * ControlsSection - Handles category filter/group/toggle UI.
+ */
+function ControlsSection({
+  tasks,
+  filterCategory,
+  setFilterCategory,
+  groupByCategory,
+  setGroupByCategory,
+  categories,
+  categoryColors,
+}) {
+  // If no categories, let user know to add tasks with category.
+  return (
+    <section className="task-controls-section">
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", width: "100%" }}>
+        <label style={{ fontSize: 15, fontWeight: 500, marginRight: 10 }}>
+          Category:
+        </label>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          style={{ minWidth: 100, fontSize: "1rem", borderRadius: 6, padding: "2px 8px" }}
+        >
+          <option value="All">All</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+        <label
+          style={{
+            marginLeft: 16,
+            fontWeight: 500,
+            fontSize: 15,
+            userSelect: "none",
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            gap: 6,
+          }}
+          htmlFor="groupByCategory"
+        >
+          <input
+            type="checkbox"
+            id="groupByCategory"
+            checked={groupByCategory}
+            onChange={() => setGroupByCategory((v) => !v)}
+            style={{ marginRight: 4, accentColor: "#43a047", width: 15, height: 15 }}
+          />
+          Group by category
+        </label>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          {categories.length > 0 && (
+            <>
+              <span style={{ fontSize: 13, color: "#888", marginRight: 3 }}>Legend:</span>
+              {categories.map((cat) => (
+                <span
+                  key={cat}
+                  style={{
+                    background: categoryColors[cat],
+                    color: "#fff",
+                    borderRadius: 7,
+                    fontSize: "0.93rem",
+                    fontWeight: 500,
+                    padding: "2px 10px",
+                    marginLeft: 3,
+                    marginRight: 0,
+                    opacity: 0.8,
+                  }}
+                  title={cat}
+                >
+                  {cat}
+                </span>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
