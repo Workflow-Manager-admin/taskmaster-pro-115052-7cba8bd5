@@ -1,19 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 /**
  * PUBLIC_INTERFACE
- * TaskList - Renders list of tasks with filter and group by category, colored labels, and overdue highlighting.
- *
- * Props:
- * - tasks (array)
- * - loading (bool)
- * - error (string)
- * - onEditTask(taskId)
- * - onDeleteTask(taskId)
- * - onToggleCompleted(taskId)
- * - filterCategory (string, optional)
- * - groupByCategory (bool, optional)
- * - categoryColors (object: categoryName -> color string, optional)
+ * TaskList - Enhanced with modern add/remove animations and accessibility.
  */
 function TaskList({
   tasks,
@@ -27,6 +16,17 @@ function TaskList({
   categoryColors = {},
 }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  // For animation: track visible tasks by id for fade-in/out
+  const [taskIds, setTaskIds] = useState(() => (Array.isArray(tasks) ? tasks.map(t => t.id) : []));
+  const prevTaskIds = useRef(taskIds);
+
+  // Watch for change to tasks, animate removal
+  useEffect(() => {
+    if (!Array.isArray(tasks)) return;
+    const ids = tasks.map(t => t.id);
+    setTaskIds(ids);
+    prevTaskIds.current = ids;
+  }, [tasks]);
 
   // For highlighting overdue
   const isOverdue = (dueDate, completed) => {
@@ -58,10 +58,7 @@ function TaskList({
     });
   }
 
-  // For animation: fade-in on mount (CSS-only for minimalism)
-  // Key for color label: use .categoryColors[cat] or fallback
-
-  // Show spinner/placeholder/etc.
+  // Render animated transitions for each task (on add/remove)
   return (
     <section className="task-list-section">
       <h2 className="section-title">Tasks</h2>
@@ -102,26 +99,42 @@ function TaskList({
                 {items.length} task{items.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {items.map((task) => renderTask(task))}
+            <ul className="animated-list" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {items.map((task) =>
+                <AnimatedTaskLi
+                  key={task.id}
+                  show={taskIds.includes(task.id)}
+                  render={() => renderTask(task)}
+                  id={task.id}
+                />
+              )}
             </ul>
           </div>
         ))
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {filtered.map((task) => renderTask(task))}
+        <ul className="animated-list" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {filtered.map((task) =>
+            <AnimatedTaskLi
+              key={task.id}
+              show={taskIds.includes(task.id)}
+              render={() => renderTask(task)}
+              id={task.id}
+            />
+          )}
         </ul>
       )}
     </section>
   );
 
+  // PUBLIC_INTERFACE
   function renderTask(task) {
     const cat =
       (task.category && task.category.trim()) || (task.category && String(task.category)) || "";
     return (
-      <li
-        key={task.id}
+      <div
         className="taskcard"
+        tabIndex={0}
+        // Accessibility: highlight task on keyboard navigation
         style={{
           border: "1px solid var(--border-color)",
           borderRadius: 8,
@@ -133,8 +146,7 @@ function TaskList({
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          transition: "box-shadow 0.18s",
-          animation: "fadein 0.48s",
+          transition: "box-shadow 0.18s, opacity 0.34s cubic-bezier(.4,0,.2,1)",
         }}
       >
         <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
@@ -315,6 +327,7 @@ function TaskList({
               borderRadius: 8,
               zIndex: 10,
               color: "#fff",
+              animation: "fade-pop-in 0.24s cubic-bezier(.4,0,.6,1)"
             }}
           >
             <div
@@ -370,15 +383,47 @@ function TaskList({
             </div>
           </div>
         )}
-      </li>
+      </div>
     );
   }
 }
 
-// Fade-in keyframes (adds smooth appearance to new task cards)
-const style = document.createElement("style");
-style.innerHTML = `@keyframes fadein { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }`;
-document.head.appendChild(style);
+// Helper component: Animate adding/removing with fade in/out
+function AnimatedTaskLi({ show, render, id }) {
+  const [shouldRender, setShouldRender] = useState(show);
+  const [animClass, setAnimClass] = useState("");
+
+  useEffect(() => {
+    let timeout;
+    if (show) {
+      setShouldRender(true);
+      setAnimClass("fade-in");
+    } else {
+      setAnimClass("fade-out");
+      timeout = setTimeout(() => setShouldRender(false), 440); // slightly more than CSS duration
+    }
+    return () => clearTimeout(timeout);
+  }, [show]);
+
+  return shouldRender ? (
+    <li
+      className={`animated-task-li ${animClass}`}
+      tabIndex={-1}
+      aria-live="polite"
+      aria-atomic="true"
+      data-task-id={id}
+      style={{
+        transition: "opacity 0.38s cubic-bezier(.4,0,.2,1), transform 0.39s cubic-bezier(.4,0,.2,1)",
+        willChange: "opacity, transform"
+      }}
+    >
+      {render()}
+    </li>
+  ) : null;
+}
+
+// Remove legacy style injection
+// Keyframes and classes moved to CSS
 
 function capitalize(str) {
   if (!str) return "";
